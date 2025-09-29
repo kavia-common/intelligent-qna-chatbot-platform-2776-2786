@@ -14,6 +14,19 @@ from pathlib import Path
 import os
 import logging
 
+# Load environment variables from .env early to ensure configuration is available across all entrypoints
+try:
+    from dotenv import load_dotenv  # type: ignore
+    dotenv_path = os.path.join(Path(__file__).resolve().parent, ".env")
+    # The .env is expected at qna_backend/.env (parent of this settings.py directory)
+    # settings.py is at qna_backend/config/settings.py -> parent.parent is qna_backend
+    dotenv_path = os.path.join(Path(__file__).resolve().parent.parent, ".env")
+    if os.path.exists(dotenv_path):
+        load_dotenv(dotenv_path)
+except Exception:
+    # Do not fail if python-dotenv isn't installed; assume env is already provided
+    pass
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -173,10 +186,14 @@ SIMPLE_JWT = {
 }
 
 # Optional startup diagnostic: indicate if GEMINI_API_KEY is present (without exposing value)
-if os.environ.get("USE_MOCK_AI", "false").lower() == "true":
-    logging.getLogger(__name__).warning("AI mode: MOCK (USE_MOCK_AI=true).")
+logger = logging.getLogger(__name__)
+_raw_mock = os.environ.get("USE_MOCK_AI", "false")
+use_mock_effective = str(_raw_mock).strip().lower() in {"true", "1", "yes", "y", "on"}
+_gemini = os.environ.get("GEMINI_API_KEY", "")
+_gemini_present = bool(str(_gemini).strip())
+if use_mock_effective:
+    logger.warning("AI mode: MOCK (USE_MOCK_AI=%s).", _raw_mock)
+elif _gemini_present:
+    logger.info("AI mode: Gemini live (GEMINI_API_KEY detected; length=%s).", len(str(_gemini)))
 else:
-    if os.environ.get("GEMINI_API_KEY"):
-        logging.getLogger(__name__).info("AI mode: Gemini live (GEMINI_API_KEY detected).")
-    else:
-        logging.getLogger(__name__).warning("AI mode: MOCK (GEMINI_API_KEY not set).")
+    logger.warning("AI mode: MOCK (GEMINI_API_KEY not set or blank).")

@@ -23,16 +23,18 @@ def get_chat_response(messages: List[Dict[str, str]]) -> str:
     - MCP_SERVER_URL (optional, if using an MCP gateway)
     """
     # Try to initialize external services lazily to avoid hard dependency if not configured.
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    use_mock = os.getenv("USE_MOCK_AI", "false").lower() == "true"
+    raw_key = os.getenv("GEMINI_API_KEY", "")
+    gemini_key = raw_key.strip() if raw_key is not None else ""
+    raw_use_mock = os.getenv("USE_MOCK_AI", "false")
+    use_mock = str(raw_use_mock).strip().lower() in {"true", "1", "yes", "y", "on"}
 
     if use_mock or not gemini_key:
         # Fallback behavior for environments without keys: echo last user message.
-        last_user = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
+        last_user = next((m.get("content", "") for m in reversed(messages) if m.get("role") == "user"), "")
         if use_mock:
-            logger.warning("Using mock AI response (USE_MOCK_AI=true).")
+            logger.warning("Using mock AI response (USE_MOCK_AI=%s).", raw_use_mock)
         else:
-            logger.warning("Using mock AI response (GEMINI_API_KEY not found in environment).")
+            logger.warning("Using mock AI response (GEMINI_API_KEY not set or blank; raw length=%s).", len(str(raw_key)))
         return f"(Mocked) I received your question: '{last_user}'. Please configure GEMINI_API_KEY for real responses."
 
     try:
@@ -42,6 +44,8 @@ def get_chat_response(messages: List[Dict[str, str]]) -> str:
 
         model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
         safety_settings = None  # could be extended via env
+
+        logger.debug("Invoking Gemini via LangChain: model=%s, key_length=%s", model_name, len(gemini_key))
 
         # Instantiate the LangChain chat model for Gemini
         llm = ChatGoogleGenerativeAI(model=model_name, api_key=gemini_key, safety_settings=safety_settings)
@@ -63,5 +67,5 @@ def get_chat_response(messages: List[Dict[str, str]]) -> str:
         # resp.content is expected to be the assistant text
         return getattr(resp, "content", str(resp))
     except Exception as e:
-        logger.exception("Chat service error: %s", e)
-        raise ChatServiceError(str(e))
+        logger.exception("Chat service error during Gemini invocation: %s", e)
+        raise ChatServiceError("Gemini invocation failed; check API key validity and network connectivity.")
