@@ -29,7 +29,10 @@ def get_chat_response(messages: List[Dict[str, str]]) -> str:
     if use_mock or not gemini_key:
         # Fallback behavior for environments without keys: echo last user message.
         last_user = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
-        logger.warning("Using mock AI response (no GEMINI_API_KEY provided or USE_MOCK_AI=true).")
+        if use_mock:
+            logger.warning("Using mock AI response (USE_MOCK_AI=true).")
+        else:
+            logger.warning("Using mock AI response (GEMINI_API_KEY not found in environment).")
         return f"(Mocked) I received your question: '{last_user}'. Please configure GEMINI_API_KEY for real responses."
 
     try:

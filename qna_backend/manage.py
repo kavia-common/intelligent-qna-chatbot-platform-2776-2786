@@ -3,6 +3,20 @@
 import os
 import sys
 
+# Attempt to load environment variables from a .env file, if present.
+# This ensures GEMINI_API_KEY and other config are available in development/runtime
+# when a process manager hasn't exported them.
+try:
+    from dotenv import load_dotenv  # type: ignore
+    # Load .env from the project root (qna_backend/.env)
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    dotenv_path = os.path.join(current_dir, ".env")
+    if os.path.exists(dotenv_path):
+        load_dotenv(dotenv_path)
+except Exception:
+    # Do not fail if python-dotenv is not installed; app can still run if env is already set.
+    pass
+
 
 def main():
     """Run administrative tasks."""

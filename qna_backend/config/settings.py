@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+import logging
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -147,3 +149,12 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.AllowAny',
     ),
 }
+
+# Optional startup diagnostic: indicate if GEMINI_API_KEY is present (without exposing value)
+if os.environ.get("USE_MOCK_AI", "false").lower() == "true":
+    logging.getLogger(__name__).warning("AI mode: MOCK (USE_MOCK_AI=true).")
+else:
+    if os.environ.get("GEMINI_API_KEY"):
+        logging.getLogger(__name__).info("AI mode: Gemini live (GEMINI_API_KEY detected).")
+    else:
+        logging.getLogger(__name__).warning("AI mode: MOCK (GEMINI_API_KEY not set).")
