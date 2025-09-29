@@ -136,6 +136,21 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
+# Explicitly allow Authorization header so browsers can send JWTs cross-origin
+CORS_ALLOW_HEADERS = list(set([
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]))
+# We use header-based JWTs, not cookies. If you later switch to cookies, set this True and adjust CSRF.
+CORS_ALLOW_CREDENTIALS = False
+
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
 X_FRAME_OPTIONS = 'ALLOWALL'
@@ -148,6 +163,13 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.AllowAny',
     ),
+}
+
+# SimpleJWT configuration:
+# Accept both "Authorization: Bearer <token>" and "Authorization: JWT <token>" prefixes
+SIMPLE_JWT = {
+    "AUTH_HEADER_TYPES": ("Bearer", "JWT"),
+    # You can tune lifetimes via env in the future; defaults are fine here.
 }
 
 # Optional startup diagnostic: indicate if GEMINI_API_KEY is present (without exposing value)
